@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Super Mario: Petualangan Aturan di Rumah</title>
+<style>
+:root{--bg:#dff0ff;--ink:#1d2340;--card:#fff;--btn:#ffcc33;--btnink:#3a2a00;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12162b;--ink:#f1f3ff;--card:#262c4d}}
+:root[data-theme="dark"]{--bg:#12162b;--ink:#f1f3ff;--card:#262c4d}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",Verdana,sans-serif}
+#app{max-width:900px;margin:0 auto;padding:8px}
+#hud{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:15px;padding:4px 2px;flex-wrap:wrap}
+#stage{position:relative}
+canvas{width:100%;aspect-ratio:2/1;display:block;border-radius:12px;border:3px solid var(--ink);background:#5c94fc;touch-action:none}
+#ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);border-radius:12px;overflow:auto}
+.card{background:var(--card);color:var(--ink);border-radius:16px;padding:14px 18px;max-width:92%;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.card h2,.card h3{margin:4px 0 8px}.card p{margin:6px 0}
+.b{display:block;width:100%;margin:6px 0;padding:10px 14px;font:700 16px "Trebuchet MS",sans-serif;background:var(--btn);color:var(--btnink);border:0;border-radius:12px;box-shadow:0 4px 0 #b88a00;cursor:pointer}
+.b:disabled{opacity:.45;box-shadow:none}
+.b.go{background:#e52521;color:#fff;box-shadow:0 4px 0 #8c1210}
+#fb{min-height:20px;font-weight:700}
+#ctl{display:flex;gap:10px;margin-top:8px}
+#ctl button{flex:1;padding:16px 0;font:800 20px "Trebuchet MS",sans-serif;border:0;border-radius:14px;background:var(--btn);color:var(--btnink);box-shadow:0 5px 0 #b88a00;touch-action:none;user-select:none;-webkit-user-select:none}
+#ctl button:active{transform:translateY(3px);box-shadow:0 2px 0 #b88a00}
+#ctl #bj{flex:2;background:#e52521;color:#fff;box-shadow:0 5px 0 #8c1210}
+#hint{font-size:13px;text-align:center;margin:8px 0}
+</style></head><body>
+<div id="app">
+<div id="hud"><span id="h1">Super Mario: Petualangan Aturan di Rumah</span><span id="h2"></span></div>
+<div id="stage"><canvas id="c" width="800" height="400"></canvas><div id="ov"></div></div>
+<div id="ctl"><button id="bl">◀</button><button id="bj">LOMPAT</button><button id="br">▶</button></div>
+<p id="hint">Komputer: tombol panah ← → dan Spasi untuk melompat. Pukul balok ? dari bawah!</p>
+</div>
+<script>
+const Q=[
+["Apa yang dimaksud dengan aturan?",["Ketentuan yang harus dipatuhi","Permainan yang bebas dilakukan","Kegiatan yang tidak berguna"],0],
+["Siapa yang dapat membuat aturan di rumah?",["Hanya anak-anak","Anggota keluarga bersama orang tua","Orang yang tidak tinggal di rumah"],1],
+["Mengapa kita harus mematuhi aturan di rumah?",["Agar bisa melakukan apa saja","Agar tidak perlu membantu","Agar kehidupan keluarga tertib dan nyaman"],2],
+["Apa yang sebaiknya dilakukan setelah bangun tidur?",["Berdoa dan merapikan tempat tidur","Langsung bermain sepanjang hari","Membiarkan kamar berantakan"],0],
+["Jika keluarga menetapkan waktu bangun pukul 05.00, apa yang sebaiknya kita lakukan?",["Bangun sesuka hati","Berusaha bangun pukul 05.00","Tidak perlu bangun pagi"],1],
+["Apa yang sebaiknya dilakukan sebelum berangkat sekolah?",["Berlari meninggalkan rumah","Membiarkan perlengkapan sekolah berantakan","Berpamitan kepada orang tua"],2],
+["Kebiasaan pagi yang baik adalah ....",["Mandi, menggosok gigi, dan sarapan","Bermain sampai terlambat","Tidak membersihkan diri"],0],
+["Di mana sebaiknya kita meletakkan sepatu setelah pulang sekolah?",["Di tengah ruang tamu","Di rak sepatu","Di atas meja makan"],1],
+["Apa yang sebaiknya dilakukan setelah pulang sekolah sebelum makan?",["Langsung bermain tanpa membersihkan diri","Meletakkan tas sembarangan","Mencuci tangan dan berganti pakaian"],2],
+["Apa yang dapat dilakukan setelah makan siang jika sudah waktunya beristirahat?",["Beristirahat sesuai kesepakatan keluarga","Membuat rumah berantakan","Mengganggu anggota keluarga"],0],
+["Contoh membantu orang tua di rumah adalah ....",["Menumpahkan air dengan sengaja","Menyiram tanaman","Mengotori halaman"],1],
+["Apa yang sebaiknya dilakukan ketika waktu bermain selesai?",["Menolak berhenti bermain","Meninggalkan mainan berserakan","Berhenti sesuai kesepakatan dan merapikan mainan"],2],
+["Mengapa kita perlu menjaga kebersihan tubuh?",["Agar tubuh bersih dan nyaman","Agar pakaian menjadi kotor","Agar tidak perlu menjaga kebersihan"],0],
+["Jika keluarga menyepakati waktu belajar pukul 19.00, kita sebaiknya ....",["Terus bermain tanpa mengingat waktu","Mulai belajar sesuai kesepakatan","Tidur sepanjang sore"],1],
+["Apa yang sebaiknya dilakukan setelah selesai belajar?",["Membiarkan buku berserakan","Membuang alat tulis","Merapikan buku dan menyiapkan perlengkapan sekolah"],2],
+["Kapan sebaiknya kita menggosok gigi?",["Sebelum tidur dan sesuai kebiasaan menjaga kebersihan","Hanya ketika ingin bermain","Tidak perlu setiap hari"],0],
+["Apa yang baik dilakukan sebelum tidur?",["Mengeluarkan semua mainan","Merapikan barang dan berdoa","Membuat kamar berantakan"],1],
+["Jika keluarga menyepakati waktu tidur pukul 21.00, apa yang sebaiknya dilakukan?",["Bermain sampai tengah malam","Menolak tidur setiap hari","Bersiap tidur sesuai kesepakatan"],2],
+["Manakah contoh perilaku taat aturan di rumah?",["Membantu merapikan rumah sesuai kemampuan","Sengaja mengotori lantai","Mengabaikan kesepakatan keluarga"],0],
+["Jika aturan keluarga membatasi waktu menonton televisi, tetapi kita terus menonton hingga larut malam, maka ....",["Kita sudah mematuhi aturan","Kita tidak mematuhi kesepakatan waktu","Kita sedang membantu orang tua"],1],
+["Apa yang mungkin terjadi jika anggota keluarga tidak mematuhi aturan merapikan barang?",["Rumah selalu rapi","Semua pekerjaan selesai sendiri","Rumah dapat menjadi berantakan"],2],
+["Apa manfaat mematuhi aturan di rumah?",["Melatih kedisiplinan dan tanggung jawab","Membuat keluarga sering bertengkar","Membuat pekerjaan bertambah berantakan"],0],
+["Jika kita melanggar kesepakatan keluarga, apa yang mungkin dilakukan orang tua?",["Membiarkan semua perilaku tanpa arahan","Mengingatkan dan membimbing kita","Mengajak kita mengabaikan aturan"],1],
+["Apa yang sebaiknya dilakukan ketika berkunjung ke rumah teman?",["Masuk tanpa izin","Langsung mengambil barang","Mengetuk pintu dan mengucapkan salam"],2],
+["Saat bermain di rumah teman, tindakan yang baik adalah ....",["Meminta izin sebelum memakai barang dan merapikan mainan","Mengambil barang tanpa izin","Meninggalkan semua mainan berserakan"],0]];
+const R=[["Rumah Ceria","#8fd3ff","#4fae5a","Mario memulai petualangan di lingkungan rumah. Kenali aturan!"],
+["Pagi yang Hebat","#ffd9a0","#6fb84f","Pagi hari di halaman rumah. Kumpulkan koin!"],
+["Pulang Sekolah","#9ad0f5","#4fa57a","Melewati jalan, taman, dan halaman rumah."],
+["Waktu Belajar","#b6a4f0","#4aa56e","Lompati platform menuju rumah untuk belajar."],
+["Pahlawan Keluarga","#ff9fb5","#6cb83f","Tantangan terakhir untuk menjadi pahlawan keluarga!"]];
+const $=i=>document.getElementById(i),cv=$('c'),g=cv.getContext('2d'),VW=800,VH=400,GY=340,K={l:0,r:0,j:0};
+let AC;function snd(f,d=.1,ty='square',v=.05,f2){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),a=AC.createGain(),n=AC.currentTime;o.type=ty;o.frequency.setValueAtTime(f,n);if(f2)o.frequency.linearRampToValueAtTime(f2,n+d);a.gain.setValueAtTime(v,n);a.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(a);a.connect(AC.destination);o.start();o.stop(n+d)}catch(e){}}
+const seq=(a,s=100)=>a.forEach((f,i)=>setTimeout(()=>snd(f,.15),i*s)),sCoin=()=>seq([988,1319],70),sJump=()=>snd(300,.15,'square',.04,600),sOk=()=>seq([523,659,784,1047],110),sBad=()=>snd(220,.25,'sawtooth',.04,150),sOpen=()=>seq([392,523,659,784],90);
+function rnd(s){return()=>(s=(s*16807)%2147483647)/2147483647}
+function arc(cx,cy,k){const a=[];for(let i=0;i<k;i++)a.push({x:cx+(i-(k-1)/2)*30,y:cy+Math.abs(i-(k-1)/2)*8,got:0});return a}
+function build(n){const r=rnd(n*97+13),W=1400+(n%5)*80,L={W,S:[],C:[],E:[],fx:W-200};
+L.S.push({x:0,y:GY,w:W,h:60,t:'g'});
+const bx=Math.floor(W*.5/32)*32;
+for(let x=400;x<W-400;x+=320+r()*150){if(Math.abs(x-bx)<200)continue;const h=36+Math.floor(r()*3)*6;L.S.push({x,y:GY-h,w:50,h,t:'p'});L.C.push(...arc(x+25,GY-h-60,3))}
+L.blk={x:bx,y:225,w:32,h:32,t:'q',used:0,bump:0};
+L.S.push({x:bx-64,y:225,w:64,h:22,t:'b'},L.blk,{x:bx+32,y:225,w:64,h:22,t:'b'});
+L.C.push(...arc(bx+16,170,5));
+for(let i=0;i<2+n%3;i++){const x=Math.floor((200+r()*(W-600))/32)*32;if(Math.abs(x-bx)<200||L.S.some(s=>s.t=='p'&&Math.abs(s.x-x)<150))continue;L.S.push({x,y:225,w:96,h:22,t:'b'});L.C.push(...arc(x+48,185,3))}
+for(let x=300;x<W-300;x+=260+r()*100)L.C.push(...arc(x,300,4));
+const ne=1+n%3+Math.floor(n/8);
+for(let i=0;i<ne;i++){const x=350+r()*(W-800);L.E.push({x,x0:x,y:GY-26,w:28,h:26,d:r()<.5?-1:1,s:.7+.08*Math.floor(n/5),dead:0})}
+return L}
+let lv=0,mode='title',L,P,cam=0,t=0,coins=0,stars=0,first=0,tries=0,ans=0,banner=0,toast='',toastT=0,conf=[];
+function load(n){lv=n;L=build(n);P={x:60,y:GY-34,w:26,h:34,vx:0,vy:0,on:1,f:1,inv:0};cam=0;ans=0;tries=0;banner=170;hud()}
+function hud(){const r=Math.floor(lv/5);$('h1').textContent='Level '+(lv%5+1);$('h2').textContent='🪙 '+coins+'   ⭐ '+stars+'/25'}
+const ov=h=>{const o=$('ov');if(h){o.innerHTML=h;o.style.display='flex'}else{o.style.display='none';o.innerHTML=''}};
+const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function coll(p,ax){for(const s of L.S){if(!hit(p,s))continue;if(ax){if(p.vx>0)p.x=s.x-p.w;else if(p.vx<0)p.x=s.x+s.w}else{if(p.vy>0){p.y=s.y-p.h;p.on=1}else if(p.vy<0){p.y=s.y+s.h;s.bump=8;if(s.t=='q'&&!s.used){p.vy=0;ask();return}}p.vy=0}}}
+function step(){const p=P,ax=K.l*-1+K.r;p.vx=ax*3.2;if(ax)p.f=ax;
+if(K.j&&p.on){p.vy=-13;p.on=0;sJump()}
+p.vy=Math.min(p.vy+.62,14);p.x+=p.vx;coll(p,1);p.x=Math.max(0,Math.min(L.W-p.w,p.x));p.y+=p.vy;p.on=0;coll(p,0);
+if(mode!='play')return;
+L.S.forEach(s=>s.bump>0&&s.bump--);if(p.inv>0)p.inv--;
+for(const c of L.C)if(!c.got&&Math.abs(p.x+13-c.x)<22&&Math.abs(p.y+17-c.y)<26){c.got=1;coins++;sCoin();hud()}
+for(const e of L.E){if(e.dead)continue;e.x+=e.d*e.s;const nb={x:e.x,y:e.y,w:e.w,h:e.h};if(Math.abs(e.x-e.x0)>90||L.S.some(s=>s.t=='p'&&hit(nb,s)))e.d*=-1;
+if(hit(p,e)){if(p.vy>0&&p.y+p.h-e.y<20){e.dead=1;p.vy=-8;snd(500,.1,'square',.05,200)}else if(!p.inv){p.inv=70;p.vy=-6;p.x-=e.d*30;sBad()}}}
+if(p.x+p.w>L.fx){if(ans)done();else{p.x=L.fx-p.w-2;if(t>toastT){toast='Pukul balok ? dari bawah dulu ya!';toastT=t+120}}}
+cam=Math.max(0,Math.min(L.W-VW,p.x-300))}
+function ask(){mode='ask';P.vy=0;K.l=K.r=K.j=0;L.blk.used=1;snd(660,.1);const q=Q[lv];
+ov('<div class="card"><h3>⭐ Soal Level '+(lv%5+1)+'</h3><p style="font-size:17px;font-weight:700">'+q[0]+'</p>'+q[1].map((x,i)=>'<button class="b" data-i="'+i+'">'+'ABC'[i]+'. '+x+'</button>').join('')+'<div id="fb"></div></div>')}
+$('ov').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+if(b.dataset.i!=null){const q=Q[lv],i=+b.dataset.i;
+if(i==q[2]){sOk();stars++;if(!tries)first++;ans=1;sOpen();hud();ov('<div class="card"><h2>🎉 Hebat, jawabanmu benar!</h2><p>⭐ Kamu mendapat bintang!</p><p><b>'+q[1][q[2]]+'</b></p><p>Jalan ke bendera sudah terbuka!</p><button class="b go" data-a="play">Lanjutkan Perjalanan</button></div>')}
+else{sBad();tries++;b.disabled=true;$('fb').textContent='Hampir! Jawaban itu belum tepat. Coba pikirkan lagi, kamu pasti bisa! 💪'}}
+else if(b.dataset.a=='play'){ov();mode='play'}
+else if(b.dataset.a=='start'||b.dataset.a=='next'){if(b.dataset.a=='start'){coins=stars=first=0;load(0)}else if(lv==24)win();else load(lv+1);ov();mode='play'}
+else if(b.dataset.a=='again'){conf=[];coins=stars=first=0;mode='title';load(0);title()}});
+function done(){mode='ask';K.l=K.r=K.j=0;sOpen();const r=Math.floor(lv/5),end=lv%5==4;
+if(lv==24){win();return}
+ov('<div class="card"><h2>🚩 Level '+(lv%5+1)+' selesai!</h2><p>⭐ '+stars+'/25 &nbsp; 🪙 '+coins+'</p>'+(end?'<p><b>Wilayah '+R[r][0]+' tamat! 🎊</b></p><p>Wilayah berikutnya: <b>'+R[r+1][0]+'</b></p>':'')+'<button class="b go" data-a="next">'+(end?'Masuk Wilayah Baru':'Level Berikutnya')+'</button></div>')}
+function win(){mode='win';const n=Math.round(first/25*100);conf=[];for(let i=0;i<140;i++)conf.push({x:Math.random()*VW,y:-Math.random()*VH,vy:1+Math.random()*3,c:'hsl('+Math.random()*360+',90%,60%)'});seq([523,659,784,1047,784,1047,1319],130);
+ov('<div class="card"><h2>🏆 Selamat, Pahlawan Keluarga!</h2><p>Kamu menyelesaikan 25 level!</p><p style="font-size:22px;font-weight:800">Nilai Akhir: '+n+'</p><p>⭐ '+stars+'/25 &nbsp; 🪙 '+coins+'</p><p>Benar pada percobaan pertama: '+first+' dari 25 soal</p><button class="b go" data-a="again">Main Lagi</button></div>')}
+function title(){ov('<div class="card"><h2>Super Mario</h2><h3>Petualangan Aturan di Rumah</h3><p>Pendidikan Pancasila · Kelas II SD</p><p>Lari, lompat, kumpulkan koin, dan pukul balok ? untuk menjawab soal!</p><button class="b go" data-a="start">MULAI PETUALANGAN</button></div>')}
+function cloud(x,y){g.beginPath();g.arc(x,y,16,0,7);g.arc(x+20,y-8,20,0,7);g.arc(x+42,y,16,0,7);g.fill()}
+function tile(x,y,q,u){g.fillStyle=q?(u?'#8a6a40':'#ffcc33'):'#c9622a';g.fillRect(x,y,32,32);g.strokeStyle='#5a2a0a';g.lineWidth=2;g.strokeRect(x+1,y+1,30,30);if(q&&!u){g.fillStyle='#fff';g.font='bold 22px sans-serif';g.textAlign='center';g.fillText('?',x+16,y+24)}else if(!q){g.beginPath();g.moveTo(x,y+16);g.lineTo(x+32,y+16);g.moveTo(x+16,y);g.lineTo(x+16,y+16);g.stroke()}}
+function draw(){const r=Math.floor(lv/5),c=R[r];g.fillStyle=c[1];g.fillRect(0,0,VW,VH);
+g.fillStyle='rgba(255,255,255,.9)';for(let i=0;i<8;i++)cloud(((i*330-cam*.2)%2640+2640)%2640-200,40+(i*53)%90);
+g.fillStyle=c[2];g.globalAlpha=.55;for(let i=0;i<6;i++){g.beginPath();g.ellipse(((i*420-cam*.4)%2520+2520)%2520-250,GY,150,70+(i%3)*25,0,Math.PI,2*Math.PI);g.fill()}g.globalAlpha=1;
+for(const s of L.S){const x=s.x-cam;if(x>VW||x+s.w<0)continue;const y=s.y-(s.bump?s.bump*.8:0);
+if(s.t=='g'){g.fillStyle='#9a5b2a';g.fillRect(x,s.y,s.w,s.h);g.fillStyle=c[2];g.fillRect(x,s.y,s.w,12)}
+else if(s.t=='p'){g.fillStyle='#2ea043';g.fillRect(x+4,y,s.w-8,s.h);g.fillStyle='#3fc257';g.fillRect(x,y,s.w,14);g.strokeStyle='#145a24';g.lineWidth=2;g.strokeRect(x,y,s.w,14)}
+else for(let i=0;i<s.w/32;i++)tile(x+i*32,y,s.t=='q',s.used)}
+const fx=L.fx-cam;g.fillStyle='#fff';g.fillRect(fx,GY-150,6,150);g.fillStyle=ans?'#2ecc71':'#e74c3c';g.beginPath();g.moveTo(fx+6,GY-148);g.lineTo(fx+50,GY-130);g.lineTo(fx+6,GY-112);g.fill();
+const cx=L.W-120-cam;g.fillStyle='#9aa3b5';g.fillRect(cx,GY-110,100,110);for(let i=0;i<4;i++)g.fillRect(cx+i*28,GY-126,18,16);g.fillStyle='#3a2a1a';g.beginPath();g.arc(cx+50,GY-30,20,Math.PI,0);g.fillRect(cx+30,GY-30,40,30);g.fill();
+for(const k of L.C){if(k.got)continue;const w=Math.abs(Math.sin((t+k.x)/15))*8+2;g.fillStyle='#ffd21f';g.beginPath();g.ellipse(k.x-cam,k.y,w,10,0,0,7);g.fill();g.strokeStyle='#b88a00';g.lineWidth=2;g.stroke()}
+for(const e of L.E){const x=e.x-cam;if(e.dead){g.fillStyle='#8a5a2a';g.fillRect(x,e.y+20,28,6);continue}g.fillStyle='#8a5a2a';g.beginPath();g.arc(x+14,e.y+14,14,Math.PI,0);g.fill();g.fillRect(x,e.y+14,28,6);g.fillStyle='#3a2a1a';g.fillRect(x+3+(Math.floor(t/10)%2)*4,e.y+20,8,6);g.fillRect(x+17-(Math.floor(t/10)%2)*4,e.y+20,8,6);g.fillStyle='#fff';g.fillRect(x+7,e.y+8,5,5);g.fillRect(x+16,e.y+8,5,5)}
+const p=P;if(!(p.inv>0&&t%6<3)){g.save();g.translate(p.x-cam+13,p.y);g.scale(p.f,1);const lg=p.on?Math.sin(p.x/6)*4:5;
+g.fillStyle='#1c4fd6';g.fillRect(-9,24+lg*.3,8,10-lg*.3);g.fillRect(1,24-lg*.3,8,10+lg*.3);g.fillRect(-10,14,20,12);
+g.fillStyle='#e52521';g.fillRect(-12,13,6,8);g.fillRect(6,13,6,8);g.fillStyle='#f5c08a';g.fillRect(-9,3,18,12);
+g.fillStyle='#e52521';g.fillRect(-10,-2,20,7);g.fillRect(2,3,12,3);g.fillStyle='#222';g.fillRect(3,6,3,4);g.fillStyle='#5a3414';g.fillRect(0,11,10,3);g.restore()}
+if(mode=='play'&&banner>0){banner--;g.globalAlpha=Math.min(1,banner/40);g.textAlign='center';g.fillStyle='#000';g.font='bold 36px sans-serif';g.fillText('Level '+(lv%5+1),402,102);g.fillStyle='#fff';g.fillText('Level '+(lv%5+1),400,100);g.globalAlpha=1}
+if(t<toastT&&mode=='play'){g.fillStyle='rgba(0,0,0,.7)';g.fillRect(200,16,400,34);g.fillStyle='#fff';g.font='bold 16px sans-serif';g.textAlign='center';g.fillText(toast,400,38)}
+if(mode=='win'){const b=Math.abs(Math.sin(t/12))*40;P.x=L.fx-300;P.y=GY-34-b;P.on=0;for(const f of conf){f.y+=f.vy;f.x+=Math.sin(f.y/20);if(f.y>VH)f.y=-10;g.fillStyle=f.c;g.fillRect(f.x,f.y,6,10)}}}
+let last=0,acc=0;function loop(ts){acc+=Math.min(ts-last,50);last=ts;while(acc>=16.67){acc-=16.67;if(mode=='play')step();else if(mode=='win')step();t++}draw();requestAnimationFrame(loop)}
+const kd={ArrowLeft:'l',KeyA:'l',ArrowRight:'r',KeyD:'r',Space:'j',ArrowUp:'j',KeyW:'j'};
+addEventListener('keydown',e=>{if(kd[e.code]){K[kd[e.code]]=1;e.preventDefault()}});
+addEventListener('keyup',e=>{if(kd[e.code])K[kd[e.code]]=0});
+[['bl','l'],['br','r'],['bj','j']].forEach(([i,k])=>{const b=$(i);b.addEventListener('pointerdown',e=>{e.preventDefault();K[k]=1});['pointerup','pointerleave','pointercancel'].forEach(v=>b.addEventListener(v,()=>K[k]=0));b.addEventListener('contextmenu',e=>e.preventDefault())});
+load(0);banner=0;title();requestAnimationFrame(loop);
+</script></body></html>
